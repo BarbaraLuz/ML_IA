@@ -1,0 +1,162 @@
+---
+title: "Atividade Final - Equipe 3"
+output:
+   flexdashboard::flex_dashboard:
+    orientation: rows
+    # vertical_layout: scroll
+    theme: lumen
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(corrplot, dplyr, DT, flexdashboard, funModeling, lubridate, plotly, shiny, zoo, ade4, car, caret, chunked, data.table, data.tree, dplyr, ffbase, foreign, funModeling, ggparty, ggplot2, gplots, LaF, Metrics, party, partykit, permimp,plm, randomForest, rattle, readr, REEMtree, sqldf, cluster, factoextra) 
+
+
+dados <- read.csv2('https://raw.githubusercontent.com/BarbaraLuz/ML_IA/main/atividade_final.csv', sep=';')
+dados_meta <- read.csv2('https://raw.githubusercontent.com/BarbaraLuz/ML_IA/main/atividade_final_metadados.csv')
+
+
+```
+
+Analise das Variaveis  {data-icon="fa-chart-line" data-orientation=rows}
+===================================== 
+
+
+Row
+-------------------------------------
+
+### Status da base de dados
+
+```{r status, echo=FALSE, warning=FALSE, message=FALSE}
+status(dados)
+summary(dados)
+
+
+
+```
+
+### Visualização da base de dados
+
+```{r Visualização, echo=FALSE, warning=FALSE, message=FALSE}
+
+head(dados)
+tail(dados)
+glimpse(dados)
+
+```
+
+### Visão Geral da base de dados
+
+
+```{r plot, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot(dados)
+
+```
+
+
+
+Agrupamento {data-icon="fa-object-group" data-orientation=rows}
+===================================== 
+
+
+
+
+Row
+-------------------------------------
+### Agrupamento 
+```{r agrupamento, echo=FALSE, warning=FALSE, message=FALSE}
+dados = as.data.frame(unclass(dados))
+
+
+dados_clean = na.omit(dados)
+
+scaled_data = as.matrix(scale(dados_clean))
+
+kmm = kmeans(scaled_data,3,nstart = 50,iter.max = 15) 
+kmm
+
+cls <- kmeans(x = scaled_data [, c(1:5)], centers = 3)
+```
+### Plot do Agrupamento
+
+```{r grafico, echo=FALSE, warning=FALSE, message=FALSE}
+clusplot(dados, cls$cluster, xlab = 'Tempo de estudo na matéria principal', ylab = 'Performance na matéria principal', main = 'Agrupamento', lines = 0, shade = F, color = TRUE, labels = 2)
+
+# plot com ggplot
+p <- ggplot() +
+  geom_point(data = dados, 
+             mapping = aes(x = STG, 
+                           y = PEG, 
+                           colour = cluster)) +
+  geom_point(mapping = aes_string(x = cls$centers[ , "STG"], 
+                                  y = cls$centers[ , "PEG"]),
+             color = "red", size = 4) +
+  geom_text(mapping = aes_string(x = cls$centers[ , "STG"], 
+                                 y = cls$centers[ , "PEG"],
+                                 label = 1:5),
+            color = "white", size = 6) +
+  theme_dark()
+
+
+```
+
+
+Predição {data-icon="fa-diagnoses" data-orientation=rows}
+=====================================
+
+Controles {.sidebar}
+-------------------------------------
+
+
+
+```{r controle3, echo=FALSE, warning=FALSE, message=FALSE}
+numericInput('numC1', 'STG', min(dados$STG), step = 0.1)
+numericInput('numC2', 'PEG', min(dados$PEG), step = 0.1)
+```
+
+What-if?
+
+O que acontece com o nível de conhecimento se o tempo de estudo na matéria principal ou performance na matéria principal forem modificados?
+
+Row
+-------------------------------------
+
+### Impacto dos Indicadores
+
+```{r pred1, echo=FALSE, warning=FALSE, message=FALSE}
+train.control <- trainControl(method = "cv", number = 10)
+dados_LM <- train(UNS ~ STG + PEG, data = dados_clean, method = "lm", trControl = train.control)
+summary(dados_LM)
+```
+
+### Predição do Nível de Conhecimento
+
+```{r pred2, echo=FALSE, warning=FALSE, message=FALSE}
+renderPrint({
+predict(dados_LM, data.frame(STG = input$numC1, PEG = input$numC2))
+  
+})
+```
+
+
+Metadados {data-icon="fas fa-info" data-orientation=rows}
+=====================================
+Row
+-------------------------------------
+Veja abaixo a tabela com o significado de cada variável e informações dos dados. <br> `r knitr::kable(dados_meta) # inline`
+
+
+Dados Completos  {data-icon="fas fa-sitemap" data-orientation=rows}
+===================================== 
+
+
+Row
+-------------------------------------
+
+### Tabela da base de dados
+
+
+Veja abaixo a tabela com as informações detalhadas dos indicadores <br> `r knitr::kable(dados) # inline`
+
